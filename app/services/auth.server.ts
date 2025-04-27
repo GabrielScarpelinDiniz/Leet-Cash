@@ -2,6 +2,7 @@ import { Authenticator } from "remix-auth";
 import { createCookieSessionStorage } from "@remix-run/node";
 import { GitHubStrategy } from "remix-auth-github";
 import { createUser, getUserByEmail } from "./user.server";
+import { getIfEmailIsWhitelisted } from "./whitelist.server";
 
 type User = {
   id: string;
@@ -91,8 +92,6 @@ const gitHubStrategy = new GitHubStrategy<SessionUser>(
     scopes: ["read:user", "user:email"],
   },
   async ({ tokens }) => {
-    const permitedEmails = process.env.ALLOWED_EMAILS?.split(",") || [];
-
     const profileResponse = await fetch("https://api.github.com/user", {
       headers: {
         Accept: "application/vnd.github+json",
@@ -120,8 +119,8 @@ const gitHubStrategy = new GitHubStrategy<SessionUser>(
 
     userProfile.email = primaryEmail?.email || userProfile.email;
 
-    if (!permitedEmails.includes(userProfile.email)) {
-      throw new Error("Email not allowed");
+    if (!(await getIfEmailIsWhitelisted(userProfile.email))) {
+      throw new Error("Email not whitelisted");
     }
 
     let user = await getUserByEmail(userProfile.email);
