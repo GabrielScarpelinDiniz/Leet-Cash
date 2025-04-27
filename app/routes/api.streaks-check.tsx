@@ -3,8 +3,9 @@ import { prisma } from "../../prisma/client";
 import { getCurrentCompetition } from "~/services/competition.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const apiKey = request.headers.get("X-Request-Authorization");
-  if (apiKey !== process.env.API_KEY) {
+  if (
+    request.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
     return new Response("Unauthorized", { status: 401 });
   }
 
