@@ -1,0 +1,83 @@
+import { ActionFunctionArgs } from "@remix-run/node";
+import { prisma } from "../../prisma/client";
+import { getCurrentCompetition } from "~/services/competition.server";
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const apiKey = request.headers.get("X-Request-Authorization");
+  if (apiKey !== process.env.API_KEY) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // Verifica qual usuário não fez check-in/commit no dia anterior, caso algum não tenha feito, zera o streak
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const startOfYesterday = new Date(
+    yesterday.getFullYear(),
+    yesterday.getMonth(),
+    yesterday.getDate()
+  );
+
+  const endOfYesterday = new Date(
+    yesterday.getFullYear(),
+    yesterday.getMonth(),
+    yesterday.getDate() + 1
+  );
+
+  // Get all users
+  const users = await prisma.user.findMany();
+
+  const currentCompetition = await getCurrentCompetition();
+  if (!currentCompetition) {
+    return new Response("No current competition", { status: 400 });
+  }
+  interface ResetResult {
+    userId: string;
+    name: string;
+    streakReset: boolean;
+  }
+
+  const resetResults: ResetResult[] = [];
+
+  await Promise.all(
+    users.map(async (user) => {
+      const yesterdayCommit = await prisma.commit.findFirst({
+        where: {
+          userId: user.id,
+          date: {
+            gte: startOfYesterday,
+            lt: endOfYesterday,
+          },
+        },
+      });
+
+      if (!yesterdayCommit && currentCompetition.startDate <= yesterday) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { streaks: 0 },
+        });
+        resetResults.push({
+          userId: user.id,
+          name: user.email,
+          streakReset: true,
+        });
+      }
+    })
+  );
+
+  return new Response(
+    JSON.stringify({
+      message: "Streak check completed",
+      date: new Date().toISOString(),
+      usersChecked: users.length,
+      streaksReset: resetResults.length,
+      details: resetResults,
+    }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+};
