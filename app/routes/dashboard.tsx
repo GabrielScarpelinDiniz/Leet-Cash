@@ -13,13 +13,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   );
   const user = session.get("user");
 
-  const userBd = await getUserById(user.id);
-
-  if (!userBd) {
+  if (!user) {
     return redirect("/login");
   }
 
-  if (!user) {
+  const userBd = await getUserById(user.id);
+
+  if (!userBd) {
     return redirect("/login");
   }
 
