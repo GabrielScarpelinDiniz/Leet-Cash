@@ -1,4 +1,5 @@
 import { LoaderFunctionArgs, redirect } from "@remix-run/node";
+import { sessionStorage } from "~/services/auth.server";
 import { getUserById } from "~/services/user.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
