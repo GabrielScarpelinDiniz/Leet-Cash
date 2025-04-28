@@ -95,26 +95,32 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const { userId, competitionId, repo, owner } = jsonData;
 
   if (!userId || !user || userId !== user.id) {
+    console.error("User not found", { userId, user });
     return new Response("Unauthorized", { status: 401 });
   }
 
   const hasCommitToday = await getIfHasTodayCommit(userId);
   if (hasCommitToday) {
+    console.error("User already committed today", { userId });
     return new Response("Already committed today", { status: 400 });
   }
 
   const currentCompetition = await getCurrentCompetition();
 
   if (!currentCompetition) {
+    console.error("No current competition", { userId });
     return new Response("No current competition", { status: 400 });
   }
   if (currentCompetition.id !== competitionId) {
+    console.error("Competition not found", { competitionId });
     return new Response("Competition not found", { status: 400 });
   }
   if (currentCompetition.repo !== repo) {
+    console.error("Repo not found", { repo });
     return new Response("Repo not found", { status: 400 });
   }
   if (currentCompetition.owner !== owner) {
+    console.error("Owner not found", { owner });
     return new Response("Owner not found", { status: 400 });
   }
   // List github commits
@@ -164,6 +170,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   });
 
   if (userCommits.length === 0) {
+    console.error("No commits found for today", { userId });
     return new Response("No commits found for today", { status: 400 });
   }
 

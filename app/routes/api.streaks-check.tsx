@@ -65,6 +65,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
     })
   );
+  console.log("Streak check completed", {
+    date: new Date().toISOString(),
+    usersChecked: users.length,
+    streaksReset: resetResults.length,
+    details: resetResults,
+  });
 
   return new Response(
     JSON.stringify({
