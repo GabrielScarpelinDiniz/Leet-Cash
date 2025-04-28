@@ -8,47 +8,52 @@ import { getUserById, getUsersRank } from "~/services/user.server";
 import { useLoaderData } from "@remix-run/react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const session = await sessionStorage.getSession(
-    request.headers.get("cookie")
-  );
-  const user = session.get("user");
+  try {
+    const session = await sessionStorage.getSession(
+      request.headers.get("cookie")
+    );
+    const user = session.get("user");
 
-  if (!user) {
+    if (!user) {
+      return redirect("/login");
+    }
+
+    const userBd = await getUserById(user.id);
+
+    if (!userBd) {
+      return redirect("/login");
+    }
+
+    const currentCompetition = await getCurrentCompetition();
+
+    if (!currentCompetition) {
+      return null;
+    }
+
+    const daysLeft = Math.ceil(
+      (new Date(currentCompetition.endDate).getTime() - new Date().getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    const totalDays =
+      (new Date(currentCompetition.endDate).getTime() -
+        new Date(currentCompetition.startDate).getTime()) /
+      (1000 * 60 * 60 * 24);
+
+    // Ranking completo simulado
+    const fullRanking = await getUsersRank(undefined);
+
+    return json({
+      user: fullRanking.find((userData) => userData.id === user.id),
+      currentCompetition,
+      daysLeft,
+      totalDays,
+      fullRanking,
+    });
+  } catch (error) {
+    console.error("Error in loader:", error);
     return redirect("/login");
   }
-
-  const userBd = await getUserById(user.id);
-
-  if (!userBd) {
-    return redirect("/login");
-  }
-
-  const currentCompetition = await getCurrentCompetition();
-
-  if (!currentCompetition) {
-    return null;
-  }
-
-  const daysLeft = Math.ceil(
-    (new Date(currentCompetition.endDate).getTime() - new Date().getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
-
-  const totalDays =
-    (new Date(currentCompetition.endDate).getTime() -
-      new Date(currentCompetition.startDate).getTime()) /
-    (1000 * 60 * 60 * 24);
-
-  // Ranking completo simulado
-  const fullRanking = await getUsersRank(undefined);
-
-  return json({
-    user: fullRanking.find((userData) => userData.id === user.id),
-    currentCompetition,
-    daysLeft,
-    totalDays,
-    fullRanking,
-  });
 };
 
 type LoaderData = {

@@ -59,9 +59,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
 
-  console.log("Start date:", start);
-  console.log("End date:", end);
-
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return new Response("Start and End dates must be valid dates", {
       status: 400,
@@ -75,8 +72,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   const today = stripTimeUTC(new Date());
-
-  console.log(today);
 
   if (start >= end) {
     return new Response("Start date must be before end date", { status: 400 });
