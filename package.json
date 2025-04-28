@@ -20,6 +20,8 @@
     "@remix-run/serve": "^2.16.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "express-rate-limit": "^7.5.0",
     "isbot": "^4.1.0",
     "lucide-react": "^0.503.0",

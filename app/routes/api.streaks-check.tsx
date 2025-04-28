@@ -1,6 +1,7 @@
 import { ActionFunctionArgs } from "@remix-run/node";
 import { prisma } from "../../prisma/client";
 import { getCurrentCompetition } from "~/services/competition.server";
+import { getDayInterval } from "~/lib/utils";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   if (
@@ -12,19 +13,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   // Verifica qual usuário não fez check-in/commit no dia anterior, caso algum não tenha feito, zera o streak
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
+  const { start: startOfYesterday, end: endOfYesterday } =
+    getDayInterval(yesterday);
 
-  const startOfYesterday = new Date(
-    yesterday.getFullYear(),
-    yesterday.getMonth(),
-    yesterday.getDate()
-  );
-
-  const endOfYesterday = new Date(
-    yesterday.getFullYear(),
-    yesterday.getMonth(),
-    yesterday.getDate() + 1
-  );
-
+  console.log(startOfYesterday, endOfYesterday);
   // Get all users
   const users = await prisma.user.findMany();
 
