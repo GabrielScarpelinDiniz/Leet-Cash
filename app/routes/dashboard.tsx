@@ -30,12 +30,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return null;
     }
     // Round both values to ensure consistent integers
-    const daysLeft = Math.ceil(
+    const daysLeft = Math.floor(
       (new Date(currentCompetition.endDate).getTime() - new Date().getTime()) /
         (1000 * 60 * 60 * 24)
     );
 
-    const totalDays = Math.ceil(
+    const totalDays = Math.floor(
       (new Date(currentCompetition.endDate).getTime() -
         new Date(currentCompetition.startDate).getTime()) /
         (1000 * 60 * 60 * 24)
