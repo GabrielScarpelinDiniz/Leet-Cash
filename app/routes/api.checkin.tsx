@@ -1,4 +1,5 @@
 import { ActionFunctionArgs } from "@remix-run/node";
+import { getDayInterval } from "~/lib/utils";
 import { sessionStorage } from "~/services/auth.server";
 import { createCommit, getIfHasTodayCommit } from "~/services/commit.server";
 import { getCurrentCompetition } from "~/services/competition.server";
@@ -154,26 +155,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const commits = (await response.json()) as GitHubCommit[];
 
     // Check if the user has any commits today
-    const today = new Date();
-    const startOfToday = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
-    );
-    const endOfToday = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate() + 1
-    );
+    const { start: startOfToday, end: endOfToday } = getDayInterval();
 
     const userCommits = commits.filter((commit) => {
-      const commitDate = new Date(commit.commit.committer.date);
+      const { committer, author, commit: commitInfo } = commit;
+      // skip any commits not tied to a GitHub user
+      if (!committer) return false;
+
+      const commitDate = new Date(commitInfo.committer.date);
+      const committerLogin = committer.login;
+      const authorLogin = author?.login;
+      const commitAuthorEmail = commitInfo.author.email;
 
       const isUserCommit =
-        commit.committer.login === user.name ||
-        commit.author?.login === user.name ||
-        (commit.committer.login === "web-flow" &&
-          commit.commit.author.email === user.email);
+        committerLogin === user.name ||
+        authorLogin === user.name ||
+        (committerLogin === "web-flow" && commitAuthorEmail === user.email);
 
       return (
         isUserCommit && commitDate >= startOfToday && commitDate < endOfToday
