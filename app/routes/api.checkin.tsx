@@ -135,9 +135,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       console.error("Owner not found", { owner });
       return new Response("Owner not found", { status: 400 });
     }
+
+    const { start: startOfToday, end: endOfToday } = getDayInterval();
+
     // List github commits
     const githubToken = process.env.GITHUB_CLASSIC_TOKEN;
-    const githubUrl = `https://api.github.com/repos/${owner}/${repo}/commits?since=${currentCompetition.startDate}&until=${currentCompetition.endDate}`;
+    const githubUrl = `https://api.github.com/repos/${owner}/${repo}/commits?since=${startOfToday}&until=${endOfToday}`;
 
     const response = await fetch(githubUrl, {
       headers: {
@@ -155,7 +158,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const commits = (await response.json()) as GitHubCommit[];
 
     // Check if the user has any commits today
-    const { start: startOfToday, end: endOfToday } = getDayInterval();
 
     const userCommits = commits.filter((commit) => {
       const { committer, author, commit: commitInfo } = commit;
