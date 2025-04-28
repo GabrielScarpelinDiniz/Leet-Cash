@@ -82,6 +82,8 @@ type GitHubCommit = {
   }>;
 };
 
+const processingUsers = new Set<string>();
+
 export const action = async ({ request }: ActionFunctionArgs) => {
   // This routes if for creating a new competition
   // use json to parse the body
@@ -99,99 +101,122 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const hasCommitToday = await getIfHasTodayCommit(userId);
-  if (hasCommitToday) {
-    console.error("User already committed today", { userId });
-    return new Response("Already committed today", { status: 400 });
+  if (processingUsers.has(userId)) {
+    console.error("User already processing", { userId });
+    return new Response("Already processing", { status: 400 });
   }
 
-  const currentCompetition = await getCurrentCompetition();
+  processingUsers.add(userId);
 
-  if (!currentCompetition) {
-    console.error("No current competition", { userId });
-    return new Response("No current competition", { status: 400 });
-  }
-  if (currentCompetition.id !== competitionId) {
-    console.error("Competition not found", { competitionId });
-    return new Response("Competition not found", { status: 400 });
-  }
-  if (currentCompetition.repo !== repo) {
-    console.error("Repo not found", { repo });
-    return new Response("Repo not found", { status: 400 });
-  }
-  if (currentCompetition.owner !== owner) {
-    console.error("Owner not found", { owner });
-    return new Response("Owner not found", { status: 400 });
-  }
-  // List github commits
-  const githubToken = process.env.GITHUB_CLASSIC_TOKEN;
-  const githubUrl = `https://api.github.com/repos/${owner}/${repo}/commits?since=${currentCompetition.startDate}&until=${currentCompetition.endDate}`;
+  try {
+    const hasCommitToday = await getIfHasTodayCommit(userId);
 
-  const response = await fetch(githubUrl, {
-    headers: {
-      Authorization: `Bearer ${githubToken}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-  });
-  if (!response.ok) {
-    console.error("GitHub API error", {
-      status: response.status,
-      body: await response.text(),
-    });
-    return new Response("Failed to fetch commits", { status: 500 });
-  }
-  const commits = (await response.json()) as GitHubCommit[];
-
-  // Check if the user has any commits today
-  const today = new Date();
-  const startOfToday = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  );
-  const endOfToday = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate() + 1
-  );
-
-  const userCommits = commits.filter((commit) => {
-    const commitDate = new Date(commit.commit.committer.date);
-
-    const isUserCommit =
-      commit.committer.login === user.name ||
-      commit.author?.login === user.name ||
-      (commit.committer.login === "web-flow" &&
-        commit.commit.author.email === user.email);
-
-    return (
-      isUserCommit && commitDate >= startOfToday && commitDate < endOfToday
-    );
-  });
-
-  if (userCommits.length === 0) {
-    console.error("No commits found for today", { userId });
-    return new Response("No commits found for today", { status: 400 });
-  }
-
-  const commit = await createCommit({
-    userId,
-    competitionId: currentCompetition.id,
-    url: userCommits[userCommits.length - 1].html_url,
-    date: new Date(userCommits[userCommits.length - 1].commit.committer.date),
-  });
-
-  await addChallengeCompleted(userId);
-  return new Response(
-    JSON.stringify({
-      message: "Commit created",
-      commit,
-    }),
-    {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-      },
+    if (hasCommitToday) {
+      console.error("User already committed today", { userId });
+      return new Response("Already committed today", { status: 400 });
     }
-  );
+
+    const currentCompetition = await getCurrentCompetition();
+
+    if (!currentCompetition) {
+      console.error("No current competition", { userId });
+      return new Response("No current competition", { status: 400 });
+    }
+    if (currentCompetition.id !== competitionId) {
+      console.error("Competition not found", { competitionId });
+      return new Response("Competition not found", { status: 400 });
+    }
+    if (currentCompetition.repo !== repo) {
+      console.error("Repo not found", { repo });
+      return new Response("Repo not found", { status: 400 });
+    }
+    if (currentCompetition.owner !== owner) {
+      console.error("Owner not found", { owner });
+      return new Response("Owner not found", { status: 400 });
+    }
+    // List github commits
+    const githubToken = process.env.GITHUB_CLASSIC_TOKEN;
+    const githubUrl = `https://api.github.com/repos/${owner}/${repo}/commits?since=${currentCompetition.startDate}&until=${currentCompetition.endDate}`;
+
+    const response = await fetch(githubUrl, {
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+    if (!response.ok) {
+      console.error("GitHub API error", {
+        status: response.status,
+        body: await response.text(),
+      });
+      return new Response("Failed to fetch commits", { status: 500 });
+    }
+    const commits = (await response.json()) as GitHubCommit[];
+
+    // Check if the user has any commits today
+    const today = new Date();
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const endOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() + 1
+    );
+
+    const userCommits = commits.filter((commit) => {
+      const commitDate = new Date(commit.commit.committer.date);
+
+      const isUserCommit =
+        commit.committer.login === user.name ||
+        commit.author?.login === user.name ||
+        (commit.committer.login === "web-flow" &&
+          commit.commit.author.email === user.email);
+
+      return (
+        isUserCommit && commitDate >= startOfToday && commitDate < endOfToday
+      );
+    });
+
+    if (userCommits.length === 0) {
+      console.error("No commits found for today", { userId });
+      return new Response("No commits found for today", { status: 400 });
+    }
+
+    const doubleCheck = await getIfHasTodayCommit(userId);
+    if (doubleCheck) {
+      console.error("Race condition detected - user already committed today", {
+        userId,
+      });
+      return new Response("Already committed today", { status: 400 });
+    }
+
+    const commit = await createCommit({
+      userId,
+      competitionId: currentCompetition.id,
+      url: userCommits[userCommits.length - 1].html_url,
+      date: new Date(userCommits[userCommits.length - 1].commit.committer.date),
+    });
+
+    await addChallengeCompleted(userId);
+    return new Response(
+      JSON.stringify({
+        message: "Commit created",
+        commit,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Error processing commit", { userId, error });
+    return new Response("Internal server error", { status: 500 });
+  } finally {
+    processingUsers.delete(userId);
+  }
 };

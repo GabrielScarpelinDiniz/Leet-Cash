@@ -6,6 +6,7 @@ import { sessionStorage } from "../services/auth.server";
 import { getCurrentCompetition } from "~/services/competition.server";
 import { getUserById, getUsersRank } from "~/services/user.server";
 import { useLoaderData } from "@remix-run/react";
+import { useState } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -92,48 +93,62 @@ type LoaderData = {
 // Para simplicidade, estamos usando dados do exemplo
 export default function Dashboard() {
   const data = useLoaderData<LoaderData | null>();
+  const [loadingCheckin, setLoadingCheckin] = useState(false);
 
   const handleCheckin = async () => {
-    const response = await fetch("/api/checkin", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId: data?.user.id,
-        competitionId: data?.currentCompetition.id,
-        repo: data?.currentCompetition.repo,
-        owner: data?.currentCompetition.owner,
-      }),
-    });
-    if (response.ok) {
-      alert("Check-in realizado com sucesso!");
-    }
-    if (response.status === 401) {
+    if (loadingCheckin) return;
+
+    setLoadingCheckin(true);
+    try {
+      const response = await fetch("/api/checkin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: data?.user.id,
+          competitionId: data?.currentCompetition.id,
+          repo: data?.currentCompetition.repo,
+          owner: data?.currentCompetition.owner,
+        }),
+      });
+      if (response.ok) {
+        alert("Check-in realizado com sucesso!");
+      }
+      if (response.status === 401) {
+        alert(
+          "Você não está autorizado a fazer check-in. \nServer Response: " +
+            (await response.text())
+        );
+      }
+      if (response.status === 404) {
+        alert(
+          "Usuário não encontrado. \nServer Response: " +
+            (await response.text())
+        );
+      }
+      if (response.status === 500) {
+        alert(
+          "Erro ao realizar check-in. \nServer Response: " +
+            (await response.text())
+        );
+      }
+      if (response.status === 400) {
+        alert(
+          "Você já fez check-in hoje. Ou você não teve commits hoje. \nServer Response: " +
+            (await response.text())
+        );
+      }
+      if (response.status === 403) {
+        alert("Você não pode fazer check-in hoje.");
+      }
+    } catch (error) {
+      console.error("Error during check-in:", error);
       alert(
-        "Você não está autorizado a fazer check-in. \nServer Response: " +
-          (await response.text())
+        "Erro ao realizar check-in. Tente novamente mais tarde. \n" + error
       );
-    }
-    if (response.status === 404) {
-      alert(
-        "Usuário não encontrado. \nServer Response: " + (await response.text())
-      );
-    }
-    if (response.status === 500) {
-      alert(
-        "Erro ao realizar check-in. \nServer Response: " +
-          (await response.text())
-      );
-    }
-    if (response.status === 400) {
-      alert(
-        "Você já fez check-in hoje. Ou você não teve commits hoje. \nServer Response: " +
-          (await response.text())
-      );
-    }
-    if (response.status === 403) {
-      alert("Você não pode fazer check-in hoje.");
+    } finally {
+      setLoadingCheckin(false);
     }
   };
 
@@ -220,6 +235,7 @@ export default function Dashboard() {
 
                 <Button
                   onClick={handleCheckin}
+                  disabled={loadingCheckin}
                   className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded-lg shadow-md transition-all hover:shadow-lg"
                 >
                   Fazer Check-in de Hoje
@@ -248,6 +264,7 @@ export default function Dashboard() {
                     variant="outline"
                     className="w-full border-white text-white hover:bg-green-600 bg-green-800"
                     onClick={handleCheckin}
+                    disabled={loadingCheckin}
                   >
                     Check-in
                   </Button>
