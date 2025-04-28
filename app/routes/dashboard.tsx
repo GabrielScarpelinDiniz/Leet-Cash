@@ -29,16 +29,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (!currentCompetition) {
       return null;
     }
-
+    // Round both values to ensure consistent integers
     const daysLeft = Math.ceil(
       (new Date(currentCompetition.endDate).getTime() - new Date().getTime()) /
         (1000 * 60 * 60 * 24)
     );
 
-    const totalDays =
+    const totalDays = Math.ceil(
       (new Date(currentCompetition.endDate).getTime() -
         new Date(currentCompetition.startDate).getTime()) /
-      (1000 * 60 * 60 * 24);
+        (1000 * 60 * 60 * 24)
+    );
+
+    // Calculate days elapsed correctly
+    const daysElapsed = totalDays - daysLeft;
 
     // Ranking completo simulado
     const fullRanking = await getUsersRank(undefined);
@@ -49,6 +53,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       daysLeft,
       totalDays,
       fullRanking,
+      daysElapsed,
     });
   } catch (error) {
     console.error("Error in loader:", error);
@@ -80,6 +85,7 @@ type LoaderData = {
     repo: string;
     owner: string;
   };
+  daysElapsed: number;
 };
 
 // Em uma aplicação real você usaria useLoaderData() para obter os dados
@@ -142,7 +148,7 @@ export default function Dashboard() {
     );
   }
 
-  const { user, daysLeft, totalDays, fullRanking } = data;
+  const { user, daysLeft, totalDays, fullRanking, daysElapsed } = data;
 
   const position =
     fullRanking.findIndex((userRank) => user.id === userRank.id) + 1;
@@ -267,7 +273,7 @@ export default function Dashboard() {
                       Progresso da temporada
                     </span>
                     <span className="text-green-600 font-semibold">
-                      {totalDays - daysLeft}/{totalDays} dias
+                      {daysElapsed}/{totalDays} dias
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
