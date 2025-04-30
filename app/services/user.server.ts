@@ -14,9 +14,17 @@ export const getUserByEmail = async (email: string) => {
 
 export const getUsersRank = async (limit?: number) => {
   return await prisma.user.findMany({
-    orderBy: {
-      challengesCompleted: "desc",
-    },
+    orderBy: [
+      {
+        challengesCompleted: "desc",
+      },
+      {
+        streaks: "desc",
+      },
+      {
+        updatedAt: "asc",
+      },
+    ],
     take: limit,
   });
 };
