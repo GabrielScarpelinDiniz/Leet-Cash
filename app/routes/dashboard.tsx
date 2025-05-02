@@ -77,6 +77,7 @@ type LoaderData = {
     challengesCompleted: number;
     streaks: number;
     avatar: string;
+    updatedAt: Date;
   }[];
   currentCompetition: {
     id: string;
@@ -369,8 +370,16 @@ export default function Dashboard() {
                           <p className="font-medium text-gray-800">
                             {userRank.name}
                           </p>
-                          <div className="flex items-center text-sm text-gray-500">
-                            <span>{userRank.challengesCompleted} desafios</span>
+                          <div className="flex items-center text-sm text-gray-500 gap-1">
+                            <span>
+                              {userRank.challengesCompleted} desafios |
+                            </span>
+                            <span>
+                              horário da submissão{" "}
+                              {new Date(
+                                userRank.updatedAt
+                              ).toLocaleTimeString()}
+                            </span>
                           </div>
                         </div>
                       </div>
