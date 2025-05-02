@@ -375,10 +375,8 @@ export default function Dashboard() {
                               {userRank.challengesCompleted} desafios |
                             </span>
                             <span>
-                              horário da submissão{" "}
-                              {new Date(
-                                userRank.updatedAt
-                              ).toLocaleTimeString()}
+                              última submissão em{" "}
+                              {new Date(userRank.updatedAt).toLocaleString()}
                             </span>
                           </div>
                         </div>
